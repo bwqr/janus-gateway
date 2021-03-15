@@ -2608,6 +2608,7 @@ function Janus(gatewayCallbacks) {
 		callbacks = callbacks || {};
 		callbacks.success = (typeof callbacks.success == "function") ? callbacks.success : Janus.noop;
 		callbacks.error = (typeof callbacks.error == "function") ? callbacks.error : webrtcError;
+		callbacks.customizeSdp = (typeof callbacks.customizeSdp == "function") ? callbacks.customizeSdp : Janus.noop;
 		var jsep = callbacks.jsep;
 		var pluginHandle = pluginHandles[handleId];
 		if(!pluginHandle || !pluginHandle.webrtcStuff) {
@@ -2622,6 +2623,7 @@ function Janus(gatewayCallbacks) {
 				callbacks.error("No PeerConnection: if this is an answer, use createAnswer and not handleRemoteJsep");
 				return;
 			}
+			callbacks.customizeSdp(jsep);
 			config.pc.setRemoteDescription(jsep)
 				.then(function() {
 					Janus.log("Remote description accepted!");
@@ -2838,7 +2840,10 @@ function Janus(gatewayCallbacks) {
 						Janus.warn("simulcast=true, but this is not Chrome nor Firefox, ignoring");
 					}
 				}
-				config.mySdp = offer.sdp;
+				config.mySdp = {
+					type: "offer",
+					sdp: offer.sdp
+				};
 				config.pc.setLocalDescription(offer)
 					.catch(callbacks.error);
 				config.mediaConstraints = mediaConstraints;
@@ -3079,7 +3084,10 @@ function Janus(gatewayCallbacks) {
 						Janus.warn("simulcast=true, but this is not Chrome nor Firefox, ignoring");
 					}
 				}
-				config.mySdp = answer.sdp;
+				config.mySdp = {
+					type: "answer",
+					sdp: answer.sdp
+				};
 				config.pc.setLocalDescription(answer)
 					.catch(callbacks.error);
 				config.mediaConstraints = mediaConstraints;
@@ -3505,6 +3513,11 @@ function Janus(gatewayCallbacks) {
 			}
 			if(!video)
 				continue;
+			var sim = lines[i].match(/a=ssrc-group:SIM (\d+) (\d+) (\d+)/);
+			if(sim) {
+				Janus.warn("The SDP already contains a SIM attribute, munging will be skipped");
+				return sdp;
+			}
 			var fid = lines[i].match(/a=ssrc-group:FID (\d+) (\d+)/);
 			if(fid) {
 				ssrc[0] = fid[1];
