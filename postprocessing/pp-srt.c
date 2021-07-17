@@ -10,7 +10,7 @@
  */
 
 #include <arpa/inet.h>
-#ifdef __MACH__
+#if defined(__MACH__) || defined(__FreeBSD__)
 #include <machine/endian.h>
 #else
 #include <endian.h>
@@ -34,6 +34,14 @@ static void janus_pp_srt_format_time(char *buffer, int len, guint64 when) {
 	gint64 hours = minutes/60;
 	minutes -= hours*60;
 	g_snprintf(buffer, len, "%02"SCNi64":%02"SCNi64":%02"SCNi64".%03"SCNi64, hours, minutes, seconds, ms);
+}
+
+/* Supported target formats */
+static const char *janus_pp_srt_formats[] = {
+	"srt", NULL
+};
+const char **janus_pp_srt_get_extensions(void) {
+	return janus_pp_srt_formats;
 }
 
 /* Processing methods */

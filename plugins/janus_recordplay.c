@@ -580,7 +580,7 @@ static const char *janus_recordplay_parse_codec(const char *dir, const char *fil
 				/* This is the info header */
 				bytes = fread(prebuffer, sizeof(char), len, file);
 				if(bytes < 0) {
-					JANUS_LOG(LOG_ERR, "Error reading from file... %s\n", strerror(errno));
+					JANUS_LOG(LOG_ERR, "Error reading from file... %s\n", g_strerror(errno));
 					fclose(file);
 					return NULL;
 				}
@@ -817,7 +817,7 @@ int janus_recordplay_init(janus_callbacks *callback, const char *config_path) {
 		int res = janus_mkdir(recordings_path, 0755);
 		JANUS_LOG(LOG_VERB, "Creating folder: %d\n", res);
 		if(res != 0) {
-			JANUS_LOG(LOG_ERR, "%s", strerror(errno));
+			JANUS_LOG(LOG_ERR, "%s", g_strerror(errno));
 			return -1;	/* No point going on... */
 		}
 	}
@@ -1585,6 +1585,7 @@ static void *janus_recordplay_handler(void *data) {
 				/* Renegotiation: make sure the user provided an offer, and send answer */
 				JANUS_LOG(LOG_VERB, "Request to update existing recorder\n");
 				if(!session->recorder || !session->recording) {
+					janus_sdp_destroy(offer);
 					JANUS_LOG(LOG_ERR, "Not a recording session, can't update\n");
 					error_code = JANUS_RECORDPLAY_ERROR_INVALID_STATE;
 					g_snprintf(error_cause, 512, "Not a recording session, can't update");
@@ -1821,7 +1822,6 @@ recdone:
 							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_MID,
 							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_RID,
 							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_REPAIRED_RID,
-							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_FRAME_MARKING,
 							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_TRANSPORT_WIDE_CC,
 							JANUS_SDP_OA_ACCEPT_EXTMAP, JANUS_RTP_EXTMAP_VIDEO_ORIENTATION,
 						JANUS_SDP_OA_DONE);
@@ -1848,10 +1848,9 @@ recdone:
 					json_t *s = json_array_get(msg_simulcast, i);
 					int mindex = json_integer_value(json_object_get(s, "mindex"));
 					JANUS_LOG(LOG_VERB, "Recording client is going to do simulcasting (#%d)\n", mindex);
-					int rid_ext_id = -1, framemarking_ext_id = -1;
-					janus_rtp_simulcasting_prepare(s, &rid_ext_id, &framemarking_ext_id, session->ssrc, session->rid);
+					int rid_ext_id = -1;
+					janus_rtp_simulcasting_prepare(s, &rid_ext_id, session->ssrc, session->rid);
 					session->sim_context.rid_ext_id = rid_ext_id;
-					session->sim_context.framemarking_ext_id = framemarking_ext_id;
 					session->sim_context.substream_target = 2;	/* Let's aim for the highest quality */
 					session->sim_context.templayer_target = 2;	/* Let's aim for all temporal layers */
 					if(rec->vcodec != JANUS_VIDEOCODEC_VP8 && rec->vcodec != JANUS_VIDEOCODEC_H264) {
@@ -1869,10 +1868,9 @@ recdone:
 			}
 			if(msg_simulcast) {
 				JANUS_LOG(LOG_VERB, "Recording client negotiated simulcasting\n");
-				int rid_ext_id = -1, framemarking_ext_id = -1;
-				janus_rtp_simulcasting_prepare(msg_simulcast, &rid_ext_id, &framemarking_ext_id, session->ssrc, session->rid);
+				int rid_ext_id = -1;
+				janus_rtp_simulcasting_prepare(msg_simulcast, &rid_ext_id, session->ssrc, session->rid);
 				session->sim_context.rid_ext_id = rid_ext_id;
-				session->sim_context.framemarking_ext_id = framemarking_ext_id;
 				session->sim_context.substream_target = 2;	/* Let's aim for the highest quality */
 				session->sim_context.templayer_target = 2;	/* Let's aim for all temporal layers */
 				if(rec->vcodec != JANUS_VIDEOCODEC_VP8 && rec->vcodec != JANUS_VIDEOCODEC_H264) {
@@ -2366,7 +2364,7 @@ janus_recordplay_frame_packet *janus_recordplay_get_frames(const char *dir, cons
 				JANUS_LOG(LOG_VERB, "New .mjr header format\n");
 				bytes = fread(prebuffer, sizeof(char), len, file);
 				if(bytes < 0) {
-					JANUS_LOG(LOG_ERR, "Error reading from file... %s\n", strerror(errno));
+					JANUS_LOG(LOG_ERR, "Error reading from file... %s\n", g_strerror(errno));
 					fclose(file);
 					return NULL;
 				}

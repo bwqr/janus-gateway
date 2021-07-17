@@ -117,6 +117,7 @@ void janus_turnrest_response_destroy(janus_turnrest_response *response) {
 	g_free(response->username);
 	g_free(response->password);
 	g_list_free_full(response->servers, janus_turnrest_instance_destroy);
+	g_free(response);
 }
 
 janus_turnrest_response *janus_turnrest_request(const char *user) {
@@ -267,6 +268,8 @@ janus_turnrest_response *janus_turnrest_request(const char *user) {
 			if(res != NULL)
 				freeaddrinfo(res);
 			g_strfreev(uri_parts);
+			g_strfreev(parts);
+			janus_turnrest_instance_destroy(instance);
 			continue;
 		}
 		freeaddrinfo(res);

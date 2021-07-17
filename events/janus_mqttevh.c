@@ -929,7 +929,7 @@ static int janus_mqttevh_init(const char *config_path) {
 			item = janus_config_get(config, config_general, janus_config_type_item, "ssl_cacert");
 		}
 		if(item && item->value) {
-			ctx->tls.cacert_file = g_strdup(item->value);
+			ctx->tls.cacert_file = janus_make_absolute_path(config_path, item->value);
 		}
 
 		item = janus_config_get(config, config_general, janus_config_type_item, "tls_client_cert");
@@ -937,14 +937,14 @@ static int janus_mqttevh_init(const char *config_path) {
 			item = janus_config_get(config, config_general, janus_config_type_item, "ssl_client_cert");
 		}
 		if(item && item->value) {
-			ctx->tls.cert_file = g_strdup(item->value);
+			ctx->tls.cert_file = janus_make_absolute_path(config_path, item->value);
 		}
 		item = janus_config_get(config, config_general, janus_config_type_item, "tls_client_key");
 		if(!item) {
 			item = janus_config_get(config, config_general, janus_config_type_item, "ssl_client_key");
 		}
 		if(item && item->value) {
-			ctx->tls.key_file = g_strdup(item->value);
+			ctx->tls.key_file = janus_make_absolute_path(config_path, item->value);
 		}
 		item = janus_config_get(config, config_general, janus_config_type_item, "tls_verify_peer");
 		if(!item) {
@@ -1181,6 +1181,7 @@ static void *janus_mqttevh_handler(void *data) {
 	janus_mqttevh_context *ctx = (janus_mqttevh_context *)data;
 	json_t *event = NULL;
 	char topicbuf[512];
+	topicbuf[0] = '\0';
 
 	JANUS_LOG(LOG_VERB, "Joining MqttEventHandler handler thread\n");
 
@@ -1212,7 +1213,7 @@ static void *janus_mqttevh_handler(void *data) {
 		if(!g_atomic_int_get(&stopping)) {
 			/* Convert event to string */
 			if(ctx->addevent) {
-				snprintf(topicbuf, sizeof(topicbuf), "%s/%s", ctx->publish.topic, janus_events_type_to_label(type));
+				g_snprintf(topicbuf, sizeof(topicbuf), "%s/%s", ctx->publish.topic, janus_events_type_to_label(type));
 				JANUS_LOG(LOG_DBG, "Debug: MQTT Publish event on %s\n", topicbuf);
 				janus_mqttevh_send_message(ctx, topicbuf, event);
 			} else {

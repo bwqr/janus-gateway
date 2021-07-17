@@ -52,8 +52,7 @@ var janus = null;
 var echotest = null;
 var opaqueId = "multiopus-"+Janus.randomString(12);
 
-var localTracks = {}, localVideos = 0,
-	remoteTracks = {}, remoteVideos = 0;
+var remoteTracks = {}, remoteVideos = 0;
 var bitrateTimer = null;
 var spinner = null;
 
@@ -238,78 +237,14 @@ $(document).ready(function() {
 									if((substream !== null && substream !== undefined) || (temporal !== null && temporal !== undefined)) {
 										if(!simulcastStarted) {
 											simulcastStarted = true;
-											addSimulcastButtons(msg["videocodec"] === "vp8" || msg["videocodec"] === "h264");
+											addSimulcastButtons(msg["videocodec"] === "vp8");
 										}
 										// We just received notice that there's been a switch, update the buttons
 										updateSimulcastButtons(substream, temporal);
 									}
 								},
 								onlocaltrack: function(track, on) {
-									Janus.debug("Local track " + (on ? "added" : "removed") + ":", track);
-									// We use the track ID as name of the element, but it may contain invalid characters
-									var trackId = track.id.replace(/[{}]/g, "");
-									if(!on) {
-										// Track removed, get rid of the stream and the rendering
-										var stream = localTracks[trackId];
-										if(stream) {
-											try {
-												var tracks = stream.getTracks();
-												for(var i in tracks) {
-													var mst = tracks[i];
-													if(mst)
-														mst.stop();
-												}
-											} catch(e) {}
-										}
-										if(track.kind === "video") {
-											$('#myvideo' + trackId).remove();
-											localVideos--;
-											if(localVideos === 0) {
-												// No video, at least for now: show a placeholder
-												if($('#videoleft .no-video-container').length === 0) {
-													$('#videoleft').append(
-														'<div class="no-video-container">' +
-															'<i class="fa fa-video-camera fa-5 no-video-icon"></i>' +
-															'<span class="no-video-text">No webcam available</span>' +
-														'</div>');
-												}
-											}
-										}
-										delete localTracks[trackId];
-										return;
-									}
-									// If we're here, a new track was added
-									var stream = localTracks[trackId];
-									if(stream) {
-										// We've been here already
-										return;
-									}
-									if($('#videoleft video').length === 0) {
-										$('#videos').removeClass('hide').show();
-									}
-									if(track.kind === "audio") {
-										// We ignore local audio tracks, they'd generate echo anyway
-										if(localVideos === 0) {
-											// No video, at least for now: show a placeholder
-											if($('#videoleft .no-video-container').length === 0) {
-												$('#videoleft').append(
-													'<div class="no-video-container">' +
-														'<i class="fa fa-video-camera fa-5 no-video-icon"></i>' +
-														'<span class="no-video-text">No webcam available</span>' +
-													'</div>');
-											}
-										}
-									} else {
-										// New video track: create a stream out of it
-										localVideos++;
-										$('#videoleft .no-video-container').remove();
-										stream = new MediaStream();
-										stream.addTrack(track.clone());
-										localTracks[trackId] = stream;
-										Janus.log("Created local stream:", stream);
-										$('#videoleft').append('<video class="rounded centered" id="myvideo' + trackId + '" width="100%" height="100%" autoplay playsinline muted="muted"/>');
-										Janus.attachMediaStream($('#myvideo' + trackId).get(0), stream);
-									}
+									// We ignore the stream we got here, we're using the static video to render it
 									if(echotest.webrtcStuff.pc.iceConnectionState !== "completed" &&
 											echotest.webrtcStuff.pc.iceConnectionState !== "connected") {
 										$("#videoleft").parent().block({
@@ -394,7 +329,7 @@ $(document).ready(function() {
 										if(!bitrateTimer) {
 											$('#curbitrate').removeClass('hide').show();
 											bitrateTimer = setInterval(function() {
-												if(!$("#peervideo" + mid + ' video').get(0))
+												if(!$("#peervideo" + mid).get(0))
 													return;
 												// Display updated bitrate, if supported
 												var bitrate = echotest.getBitrate();
@@ -557,6 +492,12 @@ function addSimulcastButtons(temporal) {
 		'		</div>' +
 		'	</div>' +
 		'</div>');
+	if(Janus.webRTCAdapter.browserDetails.browser !== "firefox") {
+		// Chromium-based browsers only have two temporal layers
+		$('#tl-2').remove();
+		$('#tl-1').css('width', '50%');
+		$('#tl-0').css('width', '50%');
+	}
 	// Enable the simulcast selection buttons
 	$('#sl-0').removeClass('btn-primary btn-success').addClass('btn-primary')
 		.unbind('click').click(function() {

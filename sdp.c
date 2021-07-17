@@ -545,11 +545,11 @@ int janus_sdp_process_remote(void *ice_handle, janus_sdp *remote_sdp, gboolean r
 				}
 			}
 			if(m->type == JANUS_SDP_VIDEO) {
-				if(medium->ssrc_peer[1] && medium->rtcp_ctx[1] == NULL) {
+				if((medium->ssrc_peer[1] || medium->rid[1] != NULL) && medium->rtcp_ctx[1] == NULL) {
 					medium->rtcp_ctx[1] = g_malloc0(sizeof(rtcp_context));
 					medium->rtcp_ctx[1]->tb = 90000;
 				}
-				if(medium->ssrc_peer[2] && medium->rtcp_ctx[2] == NULL) {
+				if((medium->ssrc_peer[2] || medium->rid[rids_hml ? 2 : 0] != NULL) && medium->rtcp_ctx[2] == NULL) {
 					medium->rtcp_ctx[2] = g_malloc0(sizeof(rtcp_context));
 					medium->rtcp_ctx[2]->tb = 90000;
 				}
@@ -1188,7 +1188,8 @@ int janus_sdp_anonymize(janus_sdp *anon) {
 		GList *purged_ptypes = NULL;
 		while(tempA) {
 			janus_sdp_attribute *a = (janus_sdp_attribute *)tempA->data;
-			if(a->value && (strstr(a->value, "red/90000") || strstr(a->value, "ulpfec/90000") || strstr(a->value, "rtx/90000"))) {
+			if(a->value && (strstr(a->value, "red/90000") || strstr(a->value, "ulpfec/90000") ||
+					strstr(a->value, "flexfec-03/90000") || strstr(a->value, "rtx/90000"))) {
 				int ptype = atoi(a->value);
 				if(ptype < 0) {
 					JANUS_LOG(LOG_ERR, "Invalid payload type (%d)\n", ptype);
